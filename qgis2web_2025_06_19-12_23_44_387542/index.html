@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/leaflet-control-geocoder.Geocoder.css">
+        <link rel="stylesheet" href="css/leaflet-measure.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        </style>
+        <title></title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/leaflet-svg-shape-markers.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet.wms.js"></script>
+        <script src="js/leaflet-control-geocoder.Geocoder.js"></script>
+        <script src="js/leaflet-measure.js"></script>
+        <script src="js/proj4.js"></script>
+        <script src="js/proj4leaflet.js"></script>
+        <script src="data/MunicipiosProvinciadeSalamanca_1.js"></script>
+        <script src="data/ProvinciasCastillayLen_2.js"></script>
+        <script src="data/ReservadelaBiosfera_3.js"></script>
+        <script src="data/ReddeEspaciosNaturales_4.js"></script>
+        <script src="data/reametropolitanaSalamanca_5.js"></script>
+        <script src="data/Municipios5000habitantes_6.js"></script>
+        <script src="data/Lneasdetren_7.js"></script>
+        <script src="data/Autovas_8.js"></script>
+        <script src="data/BienesdeIntersCultural_9.js"></script>
+        <script src="data/Pueblosdestacados_10.js"></script>
+        <script>
+        var highlightLayer;
+        function highlightFeature(e) {
+            highlightLayer = e.target;
+
+            if (e.target.feature.geometry.type === 'LineString' || e.target.feature.geometry.type === 'MultiLineString') {
+              highlightLayer.setStyle({
+                color: '#ffff00',
+              });
+            } else {
+              highlightLayer.setStyle({
+                fillColor: '#ffff00',
+                fillOpacity: 1
+              });
+            }
+        }
+        var crs = new L.Proj.CRS('EPSG:25830', '+proj=utm +zone=30 +ellps=GRS80 +units=m +no_defs', {
+            resolutions: [2800, 1400, 700, 350, 175, 84, 42, 21, 11.2, 5.6, 2.8, 1.4, 0.7, 0.35, 0.14, 0.07],
+        });
+        var map = L.map('map', {
+            crs: crs,
+            continuousWorld: false,
+            worldCopyJump: false, 
+            zoomControl:false, maxZoom:28, minZoom:1
+        }).fitBounds([[39.5294003660412,-8.68434769715461],[42.6465221297587,-1.7792571559251227]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // add class to format popup if it contains media
+		function addClassToPopupIfMedia(content, popup) {
+			var tempDiv = document.createElement('div');
+			tempDiv.innerHTML = content;
+			if (tempDiv.querySelector('td img')) {
+				popup._contentNode.classList.add('media');
+					// Delay to force the redraw
+					setTimeout(function() {
+						popup.update();
+					}, 10);
+			} else {
+				popup._contentNode.classList.remove('media');
+			}
+		}
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        var measureControl = new L.Control.Measure({
+            position: 'topleft',
+            primaryLengthUnit: 'meters',
+            secondaryLengthUnit: 'kilometers',
+            primaryAreaUnit: 'sqmeters',
+            secondaryAreaUnit: 'hectares'
+        });
+        measureControl.addTo(map);
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].innerHTML = '';
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].className += ' fas fa-ruler';
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        map.createPane('pane_Callejerogris_0');
+        map.getPane('pane_Callejerogris_0').style.zIndex = 400;
+        var layer_Callejerogris_0 = L.WMS.layer("https://www.ign.es/wms-inspire/ign-base", "IGNBaseTodo-gris", {
+            pane: 'pane_Callejerogris_0',
+            format: 'image/png',
+            uppercase: true,
+            transparent: true,
+            continuousWorld : true,
+            tiled: true,
+            info_format: 'text/html',
+            opacity: 1,
+            identify: false,
+            attribution: '',
+        });
+        map.addLayer(layer_Callejerogris_0);
+        function pop_MunicipiosProvinciadeSalamanca_1(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td class="visible-with-data" id="n_mun" colspan="2"><strong>n_mun</strong><br />' + (feature.properties['n_mun'] !== null ? autolinker.link(String(feature.properties['n_mun']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td class="visible-with-data" id="c_mun_ine" colspan="2"><strong>c_mun_ine</strong><br />' + (feature.properties['c_mun_ine'] !== null ? autolinker.link(String(feature.properties['c_mun_ine']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td class="visible-with-data" id="c_mun" colspan="2"><strong>c_mun</strong><br />' + (feature.properties['c_mun'] !== null ? autolinker.link(String(feature.properties['c_mun']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_MunicipiosProvinciadeSalamanca_1_0() {
+            return {
+                pane: 'pane_MunicipiosProvinciadeSalamanca_1',
+                opacity: 1,
+                color: 'rgba(201,201,201,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(231,113,72,0.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_MunicipiosProvinciadeSalamanca_1');
+        map.getPane('pane_MunicipiosProvinciadeSalamanca_1').style.zIndex = 401;
+        map.getPane('pane_MunicipiosProvinciadeSalamanca_1').style['mix-blend-mode'] = 'normal';
+        var layer_MunicipiosProvinciadeSalamanca_1 = new L.geoJson(json_MunicipiosProvinciadeSalamanca_1, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_MunicipiosProvinciadeSalamanca_1',
+            layerName: 'layer_MunicipiosProvinciadeSalamanca_1',
+            pane: 'pane_MunicipiosProvinciadeSalamanca_1',
+            onEachFeature: pop_MunicipiosProvinciadeSalamanca_1,
+            style: style_MunicipiosProvinciadeSalamanca_1_0,
+        });
+        bounds_group.addLayer(layer_MunicipiosProvinciadeSalamanca_1);
+        map.addLayer(layer_MunicipiosProvinciadeSalamanca_1);
+        function pop_ProvinciasCastillayLen_2(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(String(feature.properties['fid']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['c_tip_ent'] !== null ? autolinker.link(String(feature.properties['c_tip_ent']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['n_tip_ent'] !== null ? autolinker.link(String(feature.properties['n_tip_ent']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['n_prov'] !== null ? autolinker.link(String(feature.properties['n_prov']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['n_auton'] !== null ? autolinker.link(String(feature.properties['n_auton']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['c_auton_in'] !== null ? autolinker.link(String(feature.properties['c_auton_in']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['c_prov_ine'] !== null ? autolinker.link(String(feature.properties['c_prov_ine']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['c_ent_cyl'] !== null ? autolinker.link(String(feature.properties['c_ent_cyl']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['m_sup_m'] !== null ? autolinker.link(String(feature.properties['m_sup_m']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['inspireid'] !== null ? autolinker.link(String(feature.properties['inspireid']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_ProvinciasCastillayLen_2_0() {
+            return {
+                pane: 'pane_ProvinciasCastillayLen_2',
+                opacity: 1,
+                color: 'rgba(180,180,180,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(243,166,178,0.0)',
+                interactive: false,
+            }
+        }
+        map.createPane('pane_ProvinciasCastillayLen_2');
+        map.getPane('pane_ProvinciasCastillayLen_2').style.zIndex = 402;
+        map.getPane('pane_ProvinciasCastillayLen_2').style['mix-blend-mode'] = 'normal';
+        var layer_ProvinciasCastillayLen_2 = new L.geoJson(json_ProvinciasCastillayLen_2, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_ProvinciasCastillayLen_2',
+            layerName: 'layer_ProvinciasCastillayLen_2',
+            pane: 'pane_ProvinciasCastillayLen_2',
+            onEachFeature: pop_ProvinciasCastillayLen_2,
+            style: style_ProvinciasCastillayLen_2_0,
+        });
+        bounds_group.addLayer(layer_ProvinciasCastillayLen_2);
+        map.addLayer(layer_ProvinciasCastillayLen_2);
+        function pop_ReservadelaBiosfera_3(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['MAB_NAME'] !== null ? autolinker.link(String(feature.properties['MAB_NAME']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_ReservadelaBiosfera_3_0() {
+            return {
+                pane: 'pane_ReservadelaBiosfera_3',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(0,90,1,0.34901960784313724)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_ReservadelaBiosfera_3');
+        map.getPane('pane_ReservadelaBiosfera_3').style.zIndex = 403;
+        map.getPane('pane_ReservadelaBiosfera_3').style['mix-blend-mode'] = 'normal';
+        var layer_ReservadelaBiosfera_3 = new L.geoJson(json_ReservadelaBiosfera_3, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_ReservadelaBiosfera_3',
+            layerName: 'layer_ReservadelaBiosfera_3',
+            pane: 'pane_ReservadelaBiosfera_3',
+            onEachFeature: pop_ReservadelaBiosfera_3,
+            style: style_ReservadelaBiosfera_3_0,
+        });
+        bounds_group.addLayer(layer_ReservadelaBiosfera_3);
+        map.addLayer(layer_ReservadelaBiosfera_3);
+        function pop_ReddeEspaciosNaturales_4(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['nombre'] !== null ? autolinker.link(String(feature.properties['nombre']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['figura'] !== null ? autolinker.link(String(feature.properties['figura']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_ReddeEspaciosNaturales_4_0() {
+            return {
+                pane: 'pane_ReddeEspaciosNaturales_4',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(146,255,113,0.5019607843137255)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_ReddeEspaciosNaturales_4');
+        map.getPane('pane_ReddeEspaciosNaturales_4').style.zIndex = 404;
+        map.getPane('pane_ReddeEspaciosNaturales_4').style['mix-blend-mode'] = 'normal';
+        var layer_ReddeEspaciosNaturales_4 = new L.geoJson(json_ReddeEspaciosNaturales_4, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_ReddeEspaciosNaturales_4',
+            layerName: 'layer_ReddeEspaciosNaturales_4',
+            pane: 'pane_ReddeEspaciosNaturales_4',
+            onEachFeature: pop_ReddeEspaciosNaturales_4,
+            style: style_ReddeEspaciosNaturales_4_0,
+        });
+        bounds_group.addLayer(layer_ReddeEspaciosNaturales_4);
+        map.addLayer(layer_ReddeEspaciosNaturales_4);
+        function pop_reametropolitanaSalamanca_5(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['id'] !== null ? autolinker.link(String(feature.properties['id']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_reametropolitanaSalamanca_5_0() {
+            return {
+                pane: 'pane_reametropolitanaSalamanca_5',
+                stroke: false, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(233,107,255,0.41568627450980394)',
+                interactive: false,
+            }
+        }
+        map.createPane('pane_reametropolitanaSalamanca_5');
+        map.getPane('pane_reametropolitanaSalamanca_5').style.zIndex = 405;
+        map.getPane('pane_reametropolitanaSalamanca_5').style['mix-blend-mode'] = 'normal';
+        var layer_reametropolitanaSalamanca_5 = new L.geoJson(json_reametropolitanaSalamanca_5, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_reametropolitanaSalamanca_5',
+            layerName: 'layer_reametropolitanaSalamanca_5',
+            pane: 'pane_reametropolitanaSalamanca_5',
+            onEachFeature: pop_reametropolitanaSalamanca_5,
+            style: style_reametropolitanaSalamanca_5_0,
+        });
+        bounds_group.addLayer(layer_reametropolitanaSalamanca_5);
+        map.addLayer(layer_reametropolitanaSalamanca_5);
+        function pop_Municipios5000habitantes_6(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td class="visible-with-data" id="Name" colspan="2"><strong>Name</strong><br />' + (feature.properties['Name'] !== null ? autolinker.link(String(feature.properties['Name']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Población'] !== null ? autolinker.link(String(feature.properties['Población']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Municipios5000habitantes_6_0(feature) {
+            if (feature.properties['Población'] >= 5000.000000 && feature.properties['Población'] <= 8056.537102 ) {
+                return {
+                pane: 'pane_Municipios5000habitantes_6',
+                radius: 6.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(130,227,227,1.0)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['Población'] >= 8056.537102 && feature.properties['Población'] <= 39222.614841 ) {
+                return {
+                pane: 'pane_Municipios5000habitantes_6',
+                radius: 11.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(130,227,227,1.0)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['Población'] >= 39222.614841 && feature.properties['Población'] <= 150000.000000 ) {
+                return {
+                pane: 'pane_Municipios5000habitantes_6',
+                radius: 16.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(130,227,227,1.0)',
+                interactive: true,
+            }
+            }
+        }
+        map.createPane('pane_Municipios5000habitantes_6');
+        map.getPane('pane_Municipios5000habitantes_6').style.zIndex = 406;
+        map.getPane('pane_Municipios5000habitantes_6').style['mix-blend-mode'] = 'normal';
+        var layer_Municipios5000habitantes_6 = new L.geoJson(json_Municipios5000habitantes_6, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Municipios5000habitantes_6',
+            layerName: 'layer_Municipios5000habitantes_6',
+            pane: 'pane_Municipios5000habitantes_6',
+            onEachFeature: pop_Municipios5000habitantes_6,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.circleMarker(latlng, style_Municipios5000habitantes_6_0(feature));
+            },
+        });
+        bounds_group.addLayer(layer_Municipios5000habitantes_6);
+        map.addLayer(layer_Municipios5000habitantes_6);
+        function pop_Lneasdetren_7(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Lneasdetren_7_0() {
+            return {
+                pane: 'pane_Lneasdetren_7',
+                opacity: 1,
+                color: 'rgba(174,0,174,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 3.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Lneasdetren_7');
+        map.getPane('pane_Lneasdetren_7').style.zIndex = 407;
+        map.getPane('pane_Lneasdetren_7').style['mix-blend-mode'] = 'normal';
+        var layer_Lneasdetren_7 = new L.geoJson(json_Lneasdetren_7, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Lneasdetren_7',
+            layerName: 'layer_Lneasdetren_7',
+            pane: 'pane_Lneasdetren_7',
+            onEachFeature: pop_Lneasdetren_7,
+            style: style_Lneasdetren_7_0,
+        });
+        bounds_group.addLayer(layer_Lneasdetren_7);
+        map.addLayer(layer_Lneasdetren_7);
+        function pop_Autovas_8(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['id'] !== null ? autolinker.link(String(feature.properties['id']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td class="visible-with-data" id="Nombre" colspan="2"><strong>Nombre</strong><br />' + (feature.properties['Nombre'] !== null ? autolinker.link(String(feature.properties['Nombre']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Autovas_8_0() {
+            return {
+                pane: 'pane_Autovas_8',
+                opacity: 1,
+                color: 'rgba(224,247,20,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 3.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Autovas_8');
+        map.getPane('pane_Autovas_8').style.zIndex = 408;
+        map.getPane('pane_Autovas_8').style['mix-blend-mode'] = 'normal';
+        var layer_Autovas_8 = new L.geoJson(json_Autovas_8, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Autovas_8',
+            layerName: 'layer_Autovas_8',
+            pane: 'pane_Autovas_8',
+            onEachFeature: pop_Autovas_8,
+            style: style_Autovas_8_0,
+        });
+        bounds_group.addLayer(layer_Autovas_8);
+        map.addLayer(layer_Autovas_8);
+        function pop_BienesdeIntersCultural_9(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td class="visible-with-data" id="d_bien_den" colspan="2"><strong>d_bien_den</strong><br />' + (feature.properties['d_bien_den'] !== null ? autolinker.link(String(feature.properties['d_bien_den']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td class="visible-with-data" id="d_categ_ad" colspan="2"><strong>d_categ_ad</strong><br />' + (feature.properties['d_categ_ad'] !== null ? autolinker.link(String(feature.properties['d_categ_ad']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_BienesdeIntersCultural_9_0() {
+            return {
+                pane: 'pane_BienesdeIntersCultural_9',
+                opacity: 1,
+                color: 'rgba(255,156,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 3.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,195,121,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_BienesdeIntersCultural_9');
+        map.getPane('pane_BienesdeIntersCultural_9').style.zIndex = 409;
+        map.getPane('pane_BienesdeIntersCultural_9').style['mix-blend-mode'] = 'normal';
+        var layer_BienesdeIntersCultural_9 = new L.geoJson(json_BienesdeIntersCultural_9, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_BienesdeIntersCultural_9',
+            layerName: 'layer_BienesdeIntersCultural_9',
+            pane: 'pane_BienesdeIntersCultural_9',
+            onEachFeature: pop_BienesdeIntersCultural_9,
+            style: style_BienesdeIntersCultural_9_0,
+        });
+        bounds_group.addLayer(layer_BienesdeIntersCultural_9);
+        map.addLayer(layer_BienesdeIntersCultural_9);
+        function pop_Pueblosdestacados_10(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Nombre'] !== null ? autolinker.link(String(feature.properties['Nombre']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Categoría'] !== null ? autolinker.link(String(feature.properties['Categoría']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Pueblosdestacados_10_0(feature) {
+            switch(String(feature.properties['Categoría'])) {
+                case 'Pueblos Mágicos de España':
+                    return {
+                pane: 'pane_Pueblosdestacados_10',
+                shape: 'triangle',
+                radius: 5.999999999999998,
+                opacity: 1,
+                color: 'rgba(255,255,255,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,65,201,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Pueblos más Bonitos de España':
+                    return {
+                pane: 'pane_Pueblosdestacados_10',
+                shape: 'triangle',
+                radius: 5.999999999999998,
+                opacity: 1,
+                color: 'rgba(255,255,255,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,1,1,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_Pueblosdestacados_10');
+        map.getPane('pane_Pueblosdestacados_10').style.zIndex = 410;
+        map.getPane('pane_Pueblosdestacados_10').style['mix-blend-mode'] = 'normal';
+        var layer_Pueblosdestacados_10 = new L.geoJson(json_Pueblosdestacados_10, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Pueblosdestacados_10',
+            layerName: 'layer_Pueblosdestacados_10',
+            pane: 'pane_Pueblosdestacados_10',
+            onEachFeature: pop_Pueblosdestacados_10,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.shapeMarker(latlng, style_Pueblosdestacados_10_0(feature));
+            },
+        });
+        bounds_group.addLayer(layer_Pueblosdestacados_10);
+        map.addLayer(layer_Pueblosdestacados_10);
+        var osmGeocoder = new L.Control.Geocoder({
+            collapsed: true,
+            position: 'topleft',
+            text: 'Search',
+            title: 'Testing'
+        }).addTo(map);
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .className += ' fa fa-search';
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .title += 'Search for a place';
+        var overlaysTree = [
+            {label: 'Pueblos destacados<br /><table><tr><td style="text-align: center;"><img src="legend/Pueblosdestacados_10_PueblosMágicosdeEspaña0.png" /></td><td>Pueblos Mágicos de España</td></tr><tr><td style="text-align: center;"><img src="legend/Pueblosdestacados_10_PueblosmásBonitosdeEspaña1.png" /></td><td>Pueblos más Bonitos de España</td></tr></table>', layer: layer_Pueblosdestacados_10},
+            {label: '<img src="legend/BienesdeIntersCultural_9.png" /> Bienes de Interés Cultural', layer: layer_BienesdeIntersCultural_9},
+            {label: '<img src="legend/Autovas_8.png" /> Autovías', layer: layer_Autovas_8},
+            {label: '<img src="legend/Lneasdetren_7.png" /> Líneas de tren', layer: layer_Lneasdetren_7},
+            {label: 'Municipios > 5000 habitantes<br /><table><tr><td style="text-align: center;"><img src="legend/Municipios5000habitantes_6_5000100000.png" /></td><td>5.000 - 10.000</td></tr><tr><td style="text-align: center;"><img src="legend/Municipios5000habitantes_6_100001000001.png" /></td><td>10.000 - 100.000</td></tr><tr><td style="text-align: center;"><img src="legend/Municipios5000habitantes_6_1000002.png" /></td><td>> 100.000</td></tr></table>', layer: layer_Municipios5000habitantes_6},
+            {label: '<img src="legend/reametropolitanaSalamanca_5.png" /> Área metropolitana Salamanca', layer: layer_reametropolitanaSalamanca_5},
+            {label: '<img src="legend/ReddeEspaciosNaturales_4.png" /> Red de Espacios Naturales', layer: layer_ReddeEspaciosNaturales_4},
+            {label: '<img src="legend/ReservadelaBiosfera_3.png" /> Reserva de la Biosfera', layer: layer_ReservadelaBiosfera_3},
+            {label: '<img src="legend/ProvinciasCastillayLen_2.png" /> Provincias Castilla y León', layer: layer_ProvinciasCastillayLen_2},
+            {label: '<img src="legend/MunicipiosProvinciadeSalamanca_1.png" /> Municipios Provincia de Salamanca', layer: layer_MunicipiosProvinciadeSalamanca_1},
+            {label: "Callejero gris", layer: layer_Callejerogris_0},]
+        var lay = L.control.layers.tree(null, overlaysTree,{
+            //namedToggle: true,
+            //selectorBack: false,
+            //closedSymbol: '&#8862; &#x1f5c0;',
+            //openedSymbol: '&#8863; &#x1f5c1;',
+            //collapseAll: 'Collapse all',
+            //expandAll: 'Expand all',
+            collapsed: true,
+        });
+        lay.addTo(map);
+        setBounds();
+        </script>
+    </body>
+</html>
